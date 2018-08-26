@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="consoleLog" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50}: %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!--<appender name="fileInfoLog" class="ch.qos.logback.core.rolling.RollingFileAppender">-->
+        <!--<encoder>-->
+            <!--<pattern>%d - %msg%n</pattern>-->
+        <!--</encoder>-->
+        <!--&lt;!&ndash;滚动的策略&ndash;&gt;-->
+        <!--<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">-->
+            <!--&lt;!&ndash;路径&ndash;&gt;-->
+            <!--<fileNamePattern>/Users/faderw/log/sell/info.%d.log</fileNamePattern>-->
+        <!--</rollingPolicy>-->
+    <!--</appender>-->
+
+    <!--<appender name="errorInfoLog" class="ch.qos.logback.core.rolling.RollingFileAppender">-->
+        <!--<filter class="ch.qos.logback.classic.filter.ThresholdFilter">-->
+            <!--<level>ERROR</level>-->
+            <!--<onMatch>DENY</onMatch>-->
+            <!--<onMisMatch>ACCEPT</onMisMatch>-->
+        <!--</filter>-->
+        <!--<encoder>-->
+            <!--<pattern>%d - %msg%n</pattern>-->
+        <!--</encoder>-->
+        <!--&lt;!&ndash;滚动的策略&ndash;&gt;-->
+        <!--<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">-->
+            <!--&lt;!&ndash;路径&ndash;&gt;-->
+            <!--<fileNamePattern>/Users/faderw/log/sell/info.%d.log</fileNamePattern>-->
+        <!--</rollingPolicy>-->
+    <!--</appender>-->
+
+    <root level="info">
+        <appender-ref ref="consoleLog"/>
+        <!--<appender-ref ref="fileInfoLog"/>-->
+    </root>
+</configuration>
