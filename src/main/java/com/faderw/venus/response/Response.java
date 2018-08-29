@@ -1,11 +1,7 @@
 package com.faderw.venus.response;
 
-import java.io.InputStream;
 
 import com.faderw.venus.request.Request;
-
-import lombok.Getter;
-
 /**
  * @author FaderW
  */
@@ -14,9 +10,9 @@ public class Response {
     private Request request;
     private Body body;
 
-    public Response(Request request, InputStream inputStream) {
+    public Response(Request request, String bodyString) {
         this.request = request;
-        this.body = new Body(inputStream, request.charset());
+        this.body = new Body(bodyString, request.charset());
     }
 
     public Body body() {

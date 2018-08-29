@@ -12,6 +12,7 @@ public class Request<T> {
     private Spider spider;
     private String url;
     private String method = "GET";
+    private String body;
     private Map<String, String> headers = Maps.newHashMap();
     private Map<String, String> cookies = Maps.newHashMap();
     private String contentType = "text/html;charset=UTF-8";
@@ -99,5 +100,14 @@ public class Request<T> {
 
     public String method() {
         return this.method;
+    }
+
+    public Request body(String body) {
+        this.body = body;
+        return this;
+    }
+
+    public String body() {
+        return body;
     }
 }

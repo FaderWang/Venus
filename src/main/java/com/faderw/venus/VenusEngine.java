@@ -83,7 +83,7 @@ public class VenusEngine {
 
                 Request request = scheduler.nextRequest();
                 executorService.submit(new Downloader(scheduler, request));
-                VenusUtils.sleep(request.getSpider().getConfig().Delay());
+                VenusUtils.sleep(request.getSpider().getConfig().delay());
             }
         });
 

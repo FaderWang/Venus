@@ -103,6 +103,6 @@ public class MeiziExample {
 
     public static void main(String[] args) {
         MeiziSpider spider = new MeiziSpider("妹子图");
-        Venus.me(spider, Config.me().Delay(3000)).start();
+        Venus.me(spider, Config.me().Delay(3000).domain("www.meizitu.com")).start();
     }
 }
