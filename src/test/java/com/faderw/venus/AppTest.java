@@ -1,9 +1,5 @@
 package com.faderw.venus;
 
-import com.faderw.venus.config.Config;
-import com.faderw.venus.response.Response;
-import com.faderw.venus.response.Result;
-import com.faderw.venus.spider.Spider;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -48,18 +44,18 @@ public class AppTest
     }
 
     public static void main(String[] args) {
-        Venus.me(new Spider("测试爬虫"){
-        
-            @Override
-            protected Result<String> parse(Response response) {
-                return new Result(response.body().toString());
-            }
-        
-            @Override
-            public void onStart(Config config) {
-                
-            }
-        }, Config.me()).onStart(config -> System.out.print("Hello Venus")).start();;
+//        Venus.me(new Spider("测试爬虫"){
+//
+//            @Override
+//            protected void parse(Page page) {
+//
+//            }
+//
+//            @Override
+//            public void onStart(Config config) {
+//
+//            }
+//        }, Config.me()).onStart(config -> System.out.print("Hello Venus")).start();
+//    }
     }
-
 }

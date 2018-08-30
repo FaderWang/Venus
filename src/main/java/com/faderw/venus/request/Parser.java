@@ -1,13 +1,12 @@
 package com.faderw.venus.request;
 
-import com.faderw.venus.response.Response;
-import com.faderw.venus.response.Result;
+import com.faderw.venus.Page;
 
 /**
  * @author FaderW
  */
-public interface Parser<T> {
+public interface Parser {
 
-    Result<T> parse(Response response);
+    void parse(Page page);
     
 }

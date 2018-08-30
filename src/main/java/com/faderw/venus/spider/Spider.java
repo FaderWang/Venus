@@ -4,13 +4,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
+import com.faderw.venus.Page;
 import com.faderw.venus.config.Config;
 import com.faderw.venus.event.EventManager;
 import com.faderw.venus.pipeline.Pipeline;
 import com.faderw.venus.request.Parser;
 import com.faderw.venus.request.Request;
-import com.faderw.venus.response.Response;
-import com.faderw.venus.response.Result;
 import com.google.common.collect.Lists;
 
 import lombok.Data;
@@ -26,7 +25,6 @@ public abstract class Spider {
     protected String name;
     protected List<String> startUrls = Lists.newArrayList();
     protected List<Request> requests = Lists.newArrayList();
-    protected List<Pipeline> pipelines = Lists.newArrayList();
 
     public void setConfig(Config config) {
         this.config = config;
@@ -44,21 +42,13 @@ public abstract class Spider {
         return this.name;
     }
 
-    public List<Pipeline> getPipelines() {
-        return this.pipelines;
-    }
-
-    public void setPipelines(List<Pipeline> pipelines) {
-        this.pipelines = pipelines;
-    }
-
     public Spider() {
 
     }
 
     public Spider(String name) {
         this.name = name;
-        EventManager.registerEvent(EventManager.VenusEvent.SPIDER_STARTED, this::onStart);
+//        EventManager.registerEvent(EventManager.VenusEvent.SPIDER_STARTED, this::onStart);
 
     }
 
@@ -80,10 +70,6 @@ public abstract class Spider {
      */
     public abstract void onStart(Config config);
 
-    protected <T> Spider addPipline(Pipeline<T> pipeline) {
-        this.pipelines.add(pipeline);
-        return this;
-    }
 
     /**
      * 构建一个request
@@ -92,7 +78,7 @@ public abstract class Spider {
         return makeRequest(url, this::parse);
     }
 
-    public <T> Request<T> makeRequest(String url, Parser<T> parser) {
+    public <T> Request<T> makeRequest(String url, Parser parser) {
         return new Request<>(this, url, parser);
     }
 
@@ -100,7 +86,7 @@ public abstract class Spider {
      * 解析DOM
      * 子类需要实现此方法
      */
-    protected abstract <T> Result<T> parse(Response response);
+    protected abstract void parse(Page page);
 
     protected void resetRequest(Consumer<Request> consumer) {
         this.resetRequest(this.requests, consumer);

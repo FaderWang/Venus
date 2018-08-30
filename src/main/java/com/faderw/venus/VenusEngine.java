@@ -1,24 +1,23 @@
 package com.faderw.venus;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import com.faderw.venus.config.Config;
 import com.faderw.venus.download.Downloader;
+import com.faderw.venus.download.HttpClientDownloader;
 import com.faderw.venus.event.EventManager;
 import com.faderw.venus.event.EventManager.VenusEvent;
 import com.faderw.venus.pipeline.Pipeline;
 import com.faderw.venus.request.Parser;
 import com.faderw.venus.request.Request;
-import com.faderw.venus.response.Response;
-import com.faderw.venus.response.Result;
 import com.faderw.venus.scheduler.Scheduler;
 import com.faderw.venus.spider.Spider;
 import com.faderw.venus.util.VenusUtils;
@@ -34,20 +33,55 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class VenusEngine {
 
-    private List<Spider> spiders;
+    private Spider spider;
     private Config config;
     private Scheduler scheduler;
+    private Downloader downloader;
+    private List<Pipeline> pipelines = Lists.newArrayList();
     private ExecutorService executorService;
-    private boolean isRunning;
+    private volatile boolean isRunning;
 
     public VenusEngine(Venus venus) {
-        this.spiders = venus.spiders;
-        this.config = venus.config;
+        this.downloader = new HttpClientDownloader();
+        this.config = venus.getConfig();
+        this.spider = venus.getSpider();
         this.scheduler = new Scheduler();
-        this.executorService = new ThreadPoolExecutor(config.parallelThreads(), config.parallelThreads(), 
-            60L, TimeUnit.MILLISECONDS, config.queueSize() == 0 ? new SynchronousQueue<>()
-            : (config.queueSize() < 0 ? new LinkedBlockingQueue<>() : new LinkedBlockingQueue<>(config.queueSize())),
-            new ThreadFactoryBuilder().setNameFormat("task-thread-%d").build());
+        this.executorService = new ThreadPoolExecutor(config.parallelThreads(), config.parallelThreads(),
+                60L, TimeUnit.MILLISECONDS, config.queueSize() == 0 ? new SynchronousQueue<>()
+                : (config.queueSize() < 0 ? new LinkedBlockingQueue<>() : new LinkedBlockingQueue<>(config.queueSize())),
+                new ThreadFactoryBuilder().setNameFormat("task-thread-%d").build());
+    }
+
+    public static VenusEngine create(Venus venus) {
+        return new VenusEngine(venus);
+    }
+
+    public VenusEngine Spider(Spider spider) {
+        if (spider != null) {
+            throw new RuntimeException("已存在Spider!");
+        }
+        this.spider = spider;
+        return this;
+    }
+
+    public VenusEngine scheduler(Scheduler scheduler) {
+        this.scheduler = scheduler;
+        return this;
+    }
+
+    public VenusEngine downloader(Downloader downloader) {
+        this.downloader = downloader;
+        return this;
+    }
+
+    public VenusEngine pipeline(Pipeline pipeline) {
+        this.pipelines.add(pipeline);
+        return this;
+    }
+
+    public VenusEngine pipelines(List<Pipeline> pipelines) {
+        this.pipelines.addAll(pipelines);
+        return this;
     }
 
     public void start() {
@@ -57,63 +91,47 @@ public class VenusEngine {
 
         isRunning = true;
         log.info("全局启动事件");
-        EventManager.fireEvent(VenusEvent.GLOBAL_STARTED, this.config);
+//        EventManager.fireEvent(VenusEvent.GLOBAL_STARTED, this.config);
 
-        spiders.forEach(spider -> {
-            // 使用克隆为每个spider对象设置一个config属性
-            Config config = this.config.clone();
-            spider.setConfig(config);
-            
-            List<Request> requests = spider.getStartUrls().stream()
-                .map(spider::makeRequest).collect(Collectors.toList());
-            
-            spider.getRequests().addAll(requests);
-            scheduler.addRequest(requests);
-            EventManager.fireEvent(VenusEvent.SPIDER_STARTED, this.config);
+        spider.setConfig(config.clone());
+        List<Request> requestList = spider.getStartUrls().stream()
+                .map(spider::makeRequest)
+                .collect(Collectors.toList());
+        scheduler.addRequest(requestList);
 
-        });
-
-        // 开启一个线程来不断扫描是否有带爬取的Request
-        Thread downloadThread = new Thread(() -> {
-            while (isRunning) {
-                if (!scheduler.hasRequest()) {
-                    VenusUtils.sleep(100);
-                    continue;
-                }
-
-                Request request = scheduler.nextRequest();
-                executorService.submit(new Downloader(scheduler, request));
-                VenusUtils.sleep(request.getSpider().getConfig().delay());
-            }
-        });
-
-        downloadThread.setDaemon(true);
-        downloadThread.setName("download-thread");
-        downloadThread.start();
-
-        //消费
-        this.complete();
-    }
-
-    private void complete() {
-        while (isRunning) {
-            if (!scheduler.hasResponse()) {
+        while (!Thread.currentThread().isInterrupted() && isRunning) {
+            if (!scheduler.hasRequest()) {
                 VenusUtils.sleep(100);
                 continue;
             }
-            Response response = scheduler.nextResponse();
-            Parser parser   = response.getRequest().getParser();
-            if (null != parser) {
-                Result<?>     result   = parser.parse(response);
-                List<Request> requests = result.getRequests();
-                if (!VenusUtils.isEmpty(requests)) {
-                    requests.forEach(scheduler::addRequest);
-                }
-                if (null != result.getItem()) {
-                    List<Pipeline> pipelines = response.getRequest().getSpider().getPipelines();
-                    pipelines.forEach(pipeline -> pipeline.process(result.getItem(), response.getRequest()));
+            Request request = scheduler.nextRequest();
+            executorService.submit(() ->
+                processRequest(request)
+            );
+        }
+    }
+
+    private void processRequest(Request request) {
+        Page page = downloader.download(request);
+        if (page.isDownloadSuccess() && page.getHttpStatus() == 200) {
+            Parser parser = request.getParser();
+            parser.parse(page);
+
+            if (!page.isSkip()) {
+                //skip为true跳过pipeline处理
+                for (Pipeline pipeline : pipelines) {
+                    pipeline.process(page.getItem(), request);
                 }
             }
+            extractAndAddRequests(page);
+        } else {
+            log.info("page status error url {},code {}", request.getUrl(), page.getHttpStatus());
+        }
+    }
+
+    private void extractAndAddRequests(Page page) {
+        for (Request request : page.getTargetRequest()) {
+            scheduler.addRequest(request);
         }
     }
 
@@ -121,5 +139,20 @@ public class VenusEngine {
         isRunning = false;
         scheduler.clear();
         log.info("爬虫已经停止.");
+    }
+
+    public void close() {
+        destroyObject(scheduler);
+        destroyObject(spider);
+    }
+
+    private void destroyObject(Object object) {
+        if (object instanceof Closeable) {
+            try {
+                ((Closeable) object).close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

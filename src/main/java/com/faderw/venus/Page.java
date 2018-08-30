@@ -22,6 +22,7 @@ public class Page {
     private Request request;
     private String rawText;
     private Object item;
+    private boolean skip = false;
     private boolean isDownloadSuccess;
     private int httpStatus = 200;
 

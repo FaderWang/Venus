@@ -1,13 +1,14 @@
 package com.faderw.venus.example;
 
+import com.faderw.venus.Page;
 import com.faderw.venus.Venus;
+import com.faderw.venus.VenusEngine;
 import com.faderw.venus.config.Config;
 import com.faderw.venus.config.UserAgent;
 import com.faderw.venus.pipeline.Pipeline;
 import com.faderw.venus.request.Parser;
 import com.faderw.venus.request.Request;
-import com.faderw.venus.response.Response;
-import com.faderw.venus.response.Result;
+import com.faderw.venus.response.Vsoup;
 import com.faderw.venus.spider.Spider;
 import com.github.kevinsawicki.http.HttpRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -25,9 +26,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MeiziExample {
 
+    private static final String storageDir = "/Users/faderw/source/meizi";
+
     static class MeiziSpider extends Spider {
 
-        private String storageDir = "/Users/faderw/source/meizi";
 
         public MeiziSpider(String name) {
             super(name);
@@ -42,18 +44,6 @@ public class MeiziExample {
 
         @Override
         public void onStart(Config config) {
-            this.addPipline((Pipeline<List<String>>) (item, request) -> {
-               item.forEach(imgUrl -> {
-                   log.info("start download : {}", imgUrl);
-                   HttpRequest.get(imgUrl)
-                           .header("Referer", request.getUrl())
-                           .header("User-Agent", UserAgent.CHROME_FOR_MAC)
-                           .connectTimeout(20_0000)
-                           .readTimeout(20_0000)
-                           .receive(new File(storageDir, System.currentTimeMillis() + ".jpg"));
-               });
-            });
-
             this.requests.forEach(this::resetRequest);
         }
 
@@ -65,9 +55,8 @@ public class MeiziExample {
 
 
         @Override
-        protected <T> Result<T> parse(Response response) {
-            Result result = new Result<>();
-            Elements elements = response.body().css("#maincontent > div.inWrap > ul > li:nth-child(1) > div > div > a");
+        protected void parse(Page page) {
+            Elements elements = Vsoup.create(page.getRawText()).css("#maincontent > div.inWrap > ul > li:nth-child(1) > div > div > a");
             log.info("elements size {}", elements.size());
 
             List<Request> requests = elements.stream()
@@ -76,33 +65,45 @@ public class MeiziExample {
                     .map(this::resetRequest)
                     .collect(Collectors.toList());
 
-            result.addRequests(requests);
-
+            page.addTargetRequests(requests);
             // 获取下一页url
-            Optional<Element> nextElem = response.body().css("#wp_page_numbers > ul > li > a").stream()
+            Optional<Element> nextElem = Vsoup.create(page.getRawText()).css("#wp_page_numbers > ul > li > a").stream()
                     .filter(element -> "下一页".equals(element.text())).findFirst();
 
             if (nextElem.isPresent()) {
                 String nextPage = "http://www.meizitu.com/a/" + nextElem.get().attr("href");
                 Request<String> nextReq = this.makeRequest(nextPage, this::parse);
-                result.addRequest(this.resetRequest(nextReq));
+                page.addTargetRequest(this.resetRequest(nextReq));
             }
-            return result;
+            page.setSkip(true);
         }
 
-        static class PictureParser implements Parser<List<String>> {
+        static class PictureParser implements Parser {
 
             @Override
-            public Result<List<String>> parse(Response response) {
-                Elements elements = response.body().css("#picture > p > img");
+            public void parse(Page page) {
+                Elements elements = Vsoup.create(page.getRawText()).css("#picture > p > img");
                 List<String> src = elements.stream().map(element -> element.attr("src")).collect(Collectors.toList());
-                return new Result<>(src);
+                page.setItem(src);
             }
         }
     }
 
     public static void main(String[] args) {
         MeiziSpider spider = new MeiziSpider("妹子图");
-        Venus.me(spider, Config.me().delay(3000).domain("www.meizitu.com")).start();
+        Venus venus = Venus.me(spider, Config.me().delay(3000).domain("www.meizitu.com"));
+        VenusEngine.create(venus)
+                .pipeline((Pipeline<List<String>>) (item, request) -> {
+                    item.forEach(imgUrl -> {
+                        log.info("start download : {}", imgUrl);
+                        HttpRequest.get(imgUrl)
+                                .header("Referer", request.getUrl())
+                                .header("User-Agent", UserAgent.CHROME_FOR_MAC)
+                                .connectTimeout(20_0000)
+                                .readTimeout(20_0000)
+                                .receive(new File(storageDir, System.currentTimeMillis() + ".jpg"));
+                    });
+                })
+                .start();
     }
 }

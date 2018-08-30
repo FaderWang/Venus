@@ -17,9 +17,9 @@ public class Request<T> {
     private Map<String, String> cookies = Maps.newHashMap();
     private String contentType = "text/html;charset=UTF-8";
     private String charset = "UTF-8";
-    private Parser<T> parser;
+    private Parser parser;
 
-    public Request(Spider spider, String url, Parser<T> parser) {
+    public Request(Spider spider, String url, Parser parser) {
         this.spider = spider;
         this.url = url;
         this.parser = parser;
@@ -71,7 +71,7 @@ public class Request<T> {
         return this.cookies.get(key);
     }
 
-    public void setParser(Parser<T> parser) {
+    public void setParser(Parser parser) {
         this.parser = parser;
     }
 
