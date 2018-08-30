@@ -1,14 +1,13 @@
 package com.faderw.venus.example;
 
 import com.faderw.venus.Page;
-import com.faderw.venus.Venus;
 import com.faderw.venus.VenusEngine;
 import com.faderw.venus.config.Config;
 import com.faderw.venus.config.UserAgent;
 import com.faderw.venus.pipeline.Pipeline;
 import com.faderw.venus.request.Parser;
 import com.faderw.venus.request.Request;
-import com.faderw.venus.response.Vsoup;
+import com.faderw.venus.VSoup;
 import com.faderw.venus.spider.Spider;
 import com.github.kevinsawicki.http.HttpRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +25,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MeiziExample {
 
-    private static final String storageDir = "/Users/faderw/source/meizi";
+    private static final String storageDir = "/Users/faderw/source/meinv";
 
     static class MeiziSpider extends Spider {
 
@@ -56,7 +55,7 @@ public class MeiziExample {
 
         @Override
         protected void parse(Page page) {
-            Elements elements = Vsoup.create(page.getRawText()).css("#maincontent > div.inWrap > ul > li:nth-child(1) > div > div > a");
+            Elements elements = VSoup.create(page.getRawText()).css("#maincontent > div.inWrap > ul > li:nth-child(1) > div > div > a");
             log.info("elements size {}", elements.size());
 
             List<Request> requests = elements.stream()
@@ -67,7 +66,7 @@ public class MeiziExample {
 
             page.addTargetRequests(requests);
             // 获取下一页url
-            Optional<Element> nextElem = Vsoup.create(page.getRawText()).css("#wp_page_numbers > ul > li > a").stream()
+            Optional<Element> nextElem = VSoup.create(page.getRawText()).css("#wp_page_numbers > ul > li > a").stream()
                     .filter(element -> "下一页".equals(element.text())).findFirst();
 
             if (nextElem.isPresent()) {
@@ -82,7 +81,7 @@ public class MeiziExample {
 
             @Override
             public void parse(Page page) {
-                Elements elements = Vsoup.create(page.getRawText()).css("#picture > p > img");
+                Elements elements = VSoup.create(page.getRawText()).css("#picture > p > img");
                 List<String> src = elements.stream().map(element -> element.attr("src")).collect(Collectors.toList());
                 page.setItem(src);
             }
@@ -91,8 +90,8 @@ public class MeiziExample {
 
     public static void main(String[] args) {
         MeiziSpider spider = new MeiziSpider("妹子图");
-        Venus venus = Venus.me(spider, Config.me().delay(3000).domain("www.meizitu.com"));
-        VenusEngine.create(venus)
+        Config config = Config.me().delay(3000).domain("www.meizitu.com");
+        VenusEngine.create(spider, config)
                 .pipeline((Pipeline<List<String>>) (item, request) -> {
                     item.forEach(imgUrl -> {
                         log.info("start download : {}", imgUrl);

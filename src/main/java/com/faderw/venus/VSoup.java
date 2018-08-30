@@ -1,4 +1,4 @@
-package com.faderw.venus.response;
+package com.faderw.venus;
 
 import org.jsoup.Jsoup;
 import org.jsoup.select.Elements;
@@ -9,14 +9,14 @@ import us.codecraft.xsoup.Xsoup;
 /**
  * @author FaderW
  */
-public final class Vsoup {
+public final class VSoup {
 
     private String html;
 
-    public static Vsoup create(String html) {
-        Vsoup vsoup = new Vsoup();
-        vsoup.html = html;
-        return vsoup;
+    public static VSoup create(String html) {
+        VSoup VSoup = new VSoup();
+        VSoup.html = html;
+        return VSoup;
 
     }
 

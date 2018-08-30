@@ -7,7 +7,6 @@ import java.util.function.Consumer;
 import com.faderw.venus.Page;
 import com.faderw.venus.config.Config;
 import com.faderw.venus.event.EventManager;
-import com.faderw.venus.pipeline.Pipeline;
 import com.faderw.venus.request.Parser;
 import com.faderw.venus.request.Request;
 import com.google.common.collect.Lists;
@@ -48,7 +47,7 @@ public abstract class Spider {
 
     public Spider(String name) {
         this.name = name;
-//        EventManager.registerEvent(EventManager.VenusEvent.SPIDER_STARTED, this::onStart);
+        EventManager.registerEvent(EventManager.VenusEvent.SPIDER_STARTED, this::onStart);
 
     }
 
