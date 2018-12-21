@@ -23,7 +23,7 @@ public class Config implements Cloneable{
     /**
      * 同时下载的最大线程数
      */
-    private int parallelThreads = Runtime.getRuntime().availableProcessors();
+    private int parallelThreads = Runtime.getRuntime().availableProcessors() + 1;
 
     /**
      * 超时重试次数
@@ -44,6 +44,7 @@ public class Config implements Cloneable{
      * 队列深度
      */
     private int queueSize = 1024;
+
 
     public static Config me() {
         return new Config();

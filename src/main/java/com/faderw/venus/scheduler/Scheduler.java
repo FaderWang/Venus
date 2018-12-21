@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class Scheduler {
 
-    private BlockingQueue<Request> pending = Queues.newLinkedBlockingQueue();
+    private BlockingQueue<Request> pending = Queues.newLinkedBlockingQueue(1024);
 
     public void addRequest(Request request) {
         try {

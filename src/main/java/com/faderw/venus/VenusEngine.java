@@ -46,10 +46,13 @@ public class VenusEngine {
         this.config = config;
         this.spider = spider;
         this.scheduler = new Scheduler();
+
         ExecutorService executorService = new ThreadPoolExecutor(config.parallelThreads(), config.parallelThreads(),
                 60L, TimeUnit.MILLISECONDS, config.queueSize() == 0 ? new SynchronousQueue<>()
                 : (config.queueSize() < 0 ? new LinkedBlockingQueue<>() : new LinkedBlockingQueue<>(config.queueSize())),
-                new ThreadFactoryBuilder().setNameFormat("task-thread-%d").build());
+                new ThreadFactoryBuilder().setNameFormat("task-thread-%d").setUncaughtExceptionHandler((t,e) ->
+                    log.error(t.getName() + "error {}", e.getMessage(), e)
+                ).build());
 
         this.threadPool = new CountableThreadPool(config.parallelThreads(), executorService);
     }
@@ -104,7 +107,8 @@ public class VenusEngine {
         while (!Thread.currentThread().isInterrupted() && isRunning) {
             if (!scheduler.hasRequest()) {
                 if (threadPool.getThreadAlive().get() == 0) {
-                    break;
+                    isRunning = false;
+
                 }
                 VenusUtils.sleep(100);
                 continue;
@@ -144,7 +148,6 @@ public class VenusEngine {
     }
 
     public void stop(){
-        isRunning = false;
         scheduler.clear();
         log.info("爬虫已经停止.");
     }

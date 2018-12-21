@@ -20,6 +20,7 @@ public class CountableThreadPool {
     private ExecutorService executorService;
 
     public CountableThreadPool (int threadNum, ExecutorService executorService) {
+        this.threadNum = threadNum;
         reentrantLock = new ReentrantLock();
         condition = reentrantLock.newCondition();
         this.executorService = executorService;
@@ -68,5 +69,8 @@ public class CountableThreadPool {
         this.executorService.shutdown();
     }
 
+    public void shutdownNow() {
+        this.executorService.shutdownNow();
+    }
 
 }

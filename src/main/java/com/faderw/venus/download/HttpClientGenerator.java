@@ -2,10 +2,19 @@ package com.faderw.venus.download;
 
 import com.faderw.venus.config.Config;
 import com.faderw.venus.constant.HttpConstant;
+import com.faderw.venus.proxy.Proxy;
 import com.faderw.venus.request.Request;
 import com.faderw.venus.util.UrlUtils;
+import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.*;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.AuthState;
+import org.apache.http.auth.ChallengeState;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CookieStore;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
@@ -15,10 +24,10 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.auth.BasicScheme;
+import org.apache.http.impl.client.*;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.impl.cookie.BasicClientCookie;
 import org.apache.http.message.BasicHeaderElementIterator;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.protocol.HttpContext;
@@ -58,8 +67,12 @@ public class HttpClientGenerator {
         String domain = config.domain();
         CloseableHttpClient httpClient = httpClients.get(domain);
         if (httpClient == null) {
-            httpClient = generateClient(config);
-            httpClients.put(domain, httpClient);
+            synchronized (this) {
+                httpClient = httpClients.get(domain);
+                if (null == httpClient) {
+                    httpClient = generateClient(config);
+                }
+            }
         }
 
         return httpClient;
@@ -101,6 +114,7 @@ public class HttpClientGenerator {
         return httpClientBuilder.build();
     }
 
+
     public HttpUriRequest convertHttpUriRequest(Request request, Config config) {
         RequestBuilder requestBuilder = selectRequestMethod(request).setUri(UrlUtils.fixIllegalCharacterInUrl(request.getUrl()));
         if (request.headers() != null) {
@@ -120,6 +134,7 @@ public class HttpClientGenerator {
 
         requestBuilder.setConfig(requestConfigBuilder.build());
         HttpUriRequest httpUriRequest = requestBuilder.build();
+        Map<String, String> map = Maps.newHashMap();
         if (request.headers() != null && !request.headers().isEmpty()) {
             Map<String, String> headers = request.headers();
             for (Map.Entry<String, String> header : headers.entrySet()) {
@@ -127,6 +142,28 @@ public class HttpClientGenerator {
             }
         }
         return httpUriRequest;
+    }
+
+    public HttpClientContext convertHttpClientContext(Request request, Config config, Proxy proxy) {
+        HttpClientContext httpClientContext = new HttpClientContext();
+        if (proxy != null) {
+            AuthState authState = new AuthState();
+            authState.update(new BasicScheme(ChallengeState.PROXY), new UsernamePasswordCredentials(proxy.getUsername(), proxy.getPassword()));
+            httpClientContext.setAttribute(HttpClientContext.PROXY_AUTH_STATE, authState);
+        }
+
+        if (request.cookies() != null) {
+            Map<String, String> cookies = request.cookies();
+            CookieStore cookieStore = new BasicCookieStore();
+            cookies.forEach((key, value) -> {
+                BasicClientCookie cookie = new BasicClientCookie(key, value);
+                cookie.setDomain(config.domain());
+                cookieStore.addCookie(cookie);
+            });
+            httpClientContext.setCookieStore(cookieStore);
+        }
+
+        return httpClientContext;
     }
 
     private RequestBuilder selectRequestMethod(Request request) {

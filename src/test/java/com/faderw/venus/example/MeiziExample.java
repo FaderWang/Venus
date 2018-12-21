@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MeiziExample {
 
-    private static final String storageDir = "/Users/faderw/source/meinv";
+    private static final String storageDir = "/Users/faderw/source/meizi";
 
     static class MeiziSpider extends Spider {
 
@@ -55,7 +55,7 @@ public class MeiziExample {
 
         @Override
         protected void parse(Page page) {
-            Elements elements = VSoup.create(page.getRawText()).css("#maincontent > div.inWrap > ul > li:nth-child(1) > div > div > a");
+            Elements elements = VSoup.create(page.getRawText()).css("#maincontent > div.inWrap > ul > li:nth-child(6) > div > div > a");
             log.info("elements size {}", elements.size());
 
             List<Request> requests = elements.stream()

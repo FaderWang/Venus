@@ -3,6 +3,7 @@ package com.faderw.venus.download;
 import java.io.IOException;
 
 import com.faderw.venus.Page;
+import com.faderw.venus.proxy.Proxy;
 import com.faderw.venus.request.Request;
 
 import lombok.NoArgsConstructor;
@@ -10,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 
@@ -30,13 +32,14 @@ public class HttpClientDownloader implements Downloader{
 
         CloseableHttpClient httpClient = httpClientGenerator.getHttpClient(request.getSpider().getConfig());
         HttpUriRequest httpUriRequest = httpClientGenerator.convertHttpUriRequest(request, request.getSpider().getConfig());
-
+        Proxy proxy = request.getSpider().proxy();
+        HttpClientContext httpClientContext = httpClientGenerator.convertHttpClientContext(request, request.getSpider().getConfig(), proxy);
         Page page = Page.build();
         page.setRequest(request);
         CloseableHttpResponse httpResponse = null;
 
         try {
-            httpResponse = httpClient.execute(httpUriRequest);
+            httpResponse = httpClient.execute(httpUriRequest, httpClientContext);
             String bodyString = IOUtils.toString(httpResponse.getEntity().getContent(), request.charset());
             log.info("download success url-->{}", request.getUrl());
 

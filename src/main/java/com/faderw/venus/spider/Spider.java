@@ -7,6 +7,7 @@ import java.util.function.Consumer;
 import com.faderw.venus.Page;
 import com.faderw.venus.config.Config;
 import com.faderw.venus.event.EventManager;
+import com.faderw.venus.proxy.Proxy;
 import com.faderw.venus.request.Parser;
 import com.faderw.venus.request.Request;
 import com.google.common.collect.Lists;
@@ -21,6 +22,7 @@ import lombok.Data;
 public abstract class Spider {
 
     protected Config config;
+    protected Proxy proxy;
     protected String name;
     protected List<String> startUrls = Lists.newArrayList();
     protected List<Request> requests = Lists.newArrayList();
@@ -39,6 +41,14 @@ public abstract class Spider {
 
     public String getName() {
         return this.name;
+    }
+
+    public Proxy proxy() {
+        return this.proxy;
+    }
+
+    public void setProxy(Proxy proxy) {
+        this.proxy = proxy;
     }
 
     public Spider() {

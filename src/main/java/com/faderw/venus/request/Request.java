@@ -1,5 +1,6 @@
 package com.faderw.venus.request;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import com.faderw.venus.spider.Spider;
@@ -13,8 +14,8 @@ public class Request<T> {
     private String url;
     private String method = "GET";
     private String body;
-    private Map<String, String> headers = Maps.newHashMap();
-    private Map<String, String> cookies = Maps.newHashMap();
+    private Map<String, String> headers = new HashMap<>();
+    private Map<String, String> cookies = new HashMap<>();
     private String contentType = "text/html;charset=UTF-8";
     private String charset = "UTF-8";
     private Parser parser;
